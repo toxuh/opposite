@@ -15,9 +15,25 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Antipode Finder",
+  title: "Antipode Explorer - Discover Your Opposite Point on Earth",
   description:
-    "Find and view the very opposite point on Earth from your location.",
+    "Explore the exact opposite point on Earth from any location. Interactive maps, real-time calculations, and fascinating geographic insights. Drag and discover antipodes around the globe.",
+  keywords: [
+    "antipode",
+    "geography",
+    "earth",
+    "coordinates",
+    "maps",
+    "interactive",
+    "globe",
+  ],
+  authors: [{ name: "Antipode Explorer" }],
+  openGraph: {
+    title: "Antipode Explorer",
+    description:
+      "Discover the exact opposite point on Earth from your location",
+    type: "website",
+  },
 };
 
 const RootLayout = ({

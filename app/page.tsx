@@ -1,20 +1,30 @@
 "use client";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { motion } from "framer-motion";
+import { Loader2, MapPin } from "lucide-react";
 
 import { computeAntipode, type Coordinates } from "@/lib/services/antipode";
-import { cn } from "@/lib/utils";
 
 const AntipodeMaps = dynamic(() => import("@/app/_components/antipode-maps"), {
   ssr: false,
 });
+const InfoPanel = dynamic(() => import("@/app/_components/info-panel"), {
+  ssr: false,
+});
+const FactsPanel = dynamic(() => import("@/app/_components/facts-panel"), {
+  ssr: false,
+});
+const LocationsPanel = dynamic(
+  () => import("@/app/_components/locations-panel"),
+  { ssr: false },
+);
 
 interface Status {
   state: "idle" | "locating" | "ready" | "error";
   message?: string;
 }
-
-const format = (n: number): string => n.toFixed(6);
 
 const useGeolocation = () => {
   const [coords, setCoords] = useState<Coordinates | null>(null);
@@ -49,13 +59,36 @@ const useGeolocation = () => {
   return { coords, status, request };
 };
 
-interface Props {
-  className?: string;
-}
-
-const Home = ({ className }: Readonly<Props>) => {
+const Home = () => {
   const { coords, status, request } = useGeolocation();
   const [pos, setPos] = useState<Coordinates | null>(null);
+  const [showInfo, setShowInfo] = useState(true);
+  const [showFacts, setShowFacts] = useState(true);
+  const [showLocations, setShowLocations] = useState(true);
+
+  // Load panel states from localStorage
+  useEffect(() => {
+    const savedInfo = localStorage.getItem("panel-info");
+    const savedFacts = localStorage.getItem("panel-facts");
+    const savedLocations = localStorage.getItem("panel-locations");
+
+    if (savedInfo !== null) setShowInfo(savedInfo === "true");
+    if (savedFacts !== null) setShowFacts(savedFacts === "true");
+    if (savedLocations !== null) setShowLocations(savedLocations === "true");
+  }, []);
+
+  // Save panel states to localStorage
+  useEffect(() => {
+    localStorage.setItem("panel-info", String(showInfo));
+  }, [showInfo]);
+
+  useEffect(() => {
+    localStorage.setItem("panel-facts", String(showFacts));
+  }, [showFacts]);
+
+  useEffect(() => {
+    localStorage.setItem("panel-locations", String(showLocations));
+  }, [showLocations]);
 
   useEffect(() => {
     if (coords && !pos) setPos(coords);
@@ -64,75 +97,97 @@ const Home = ({ className }: Readonly<Props>) => {
   const opposite = useMemo(() => (pos ? computeAntipode(pos) : null), [pos]);
 
   return (
-    <div
-      className={cn(
-        "min-h-dvh p-6 sm:p-10 flex flex-col items-center gap-6",
-        className,
-      )}
-    >
-      <h1 className="text-2xl font-semibold tracking-tight">
-        Find your antipode
-      </h1>
-
+    <div className="relative h-screen overflow-hidden">
+      {/* Loading state - Full screen */}
       {status.state === "locating" && (
-        <p className="text-sm text-muted-foreground">
-          Requesting your location…
-        </p>
-      )}
-
-      {status.state === "error" && (
-        <div className="flex flex-col items-center gap-3">
-          <p className="text-sm text-destructive">
-            {status.message ?? "Failed to get location"}
-          </p>
-          <button
-            type="button"
-            onClick={request}
-            className="rounded-md border px-3 py-1.5 text-sm hover:bg-secondary"
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-blue-950 to-purple-950 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex flex-col items-center gap-6"
           >
-            Try again
-          </button>
+            <Loader2 className="w-12 h-12 animate-spin text-blue-400" />
+            <p className="text-lg text-muted-foreground">
+              Locating your position...
+            </p>
+          </motion.div>
         </div>
       )}
 
-      {pos && (
-        <div className="w-full max-w-xl rounded-lg border p-4 flex flex-col gap-2">
-          <h2 className="text-base font-medium">Your location</h2>
-          <div className="flex items-center justify-between gap-4 text-sm">
-            <span className="text-muted-foreground">Latitude</span>
-            <span className="font-mono">{format(pos.lat)}</span>
-          </div>
-          <div className="flex items-center justify-between gap-4 text-sm">
-            <span className="text-muted-foreground">Longitude</span>
-            <span className="font-mono">{format(pos.lon)}</span>
-          </div>
-        </div>
-      )}
-
-      {pos && opposite && (
-        <div className="w-full max-w-4xl flex flex-col gap-4">
-          <div className="w-full max-w-xl rounded-lg border p-4 flex flex-col gap-2">
-            <h2 className="text-base font-medium">Antipode</h2>
-            <div className="flex items-center justify-between gap-4 text-sm">
-              <span className="text-muted-foreground">Latitude</span>
-              <span className="font-mono">{format(opposite.lat)}</span>
+      {/* Error state - Full screen */}
+      {status.state === "error" && (
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-blue-950 to-purple-950 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="max-w-md p-8 rounded-2xl border border-red-500/30 bg-black/60 backdrop-blur-xl"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <MapPin className="w-6 h-6 text-red-400" />
+              <h3 className="text-xl font-semibold">Location Error</h3>
             </div>
-            <div className="flex items-center justify-between gap-4 text-sm">
-              <span className="text-muted-foreground">Longitude</span>
-              <span className="font-mono">{format(opposite.lon)}</span>
-            </div>
-            <a
-              className="text-xs text-muted-foreground hover:underline"
-              href={`https://www.openstreetmap.org/?mlat=${opposite.lat}&mlon=${opposite.lon}#map=8/${opposite.lat}/${opposite.lon}`}
-              target="_blank"
-              rel="noreferrer"
+            <p className="text-muted-foreground mb-6">
+              {status.message ?? "Failed to get location"}
+            </p>
+            <button
+              type="button"
+              onClick={request}
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 px-4 py-3 font-medium transition-colors"
             >
-              Open in OpenStreetMap ↗
-            </a>
-          </div>
-
-          <AntipodeMaps pos={pos} onDrag={setPos} />
+              <Loader2 className="w-4 h-4" />
+              Try again
+            </button>
+          </motion.div>
         </div>
+      )}
+
+      {/* Main content - Maps full screen */}
+      {pos && opposite && (
+        <>
+          {/* Maps */}
+          <AntipodeMaps pos={pos} onDrag={setPos} />
+
+          {/* Logo - Top Left */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="fixed top-3 left-16 z-20 px-3 py-1.5 bg-black/60 backdrop-blur-xl border border-white/20 rounded shadow-lg"
+          >
+            <h1 className="text-xs font-mono text-white/90">
+              Antipode Explorer
+            </h1>
+          </motion.div>
+
+          {/* Widget Panels - Top Right */}
+          <div className="fixed top-4 right-4 z-30 flex flex-col gap-3 items-end">
+            <div>
+              <InfoPanel
+                isExpanded={showInfo}
+                onToggle={() => setShowInfo(!showInfo)}
+                userLocation={pos}
+                antipode={opposite}
+              />
+            </div>
+
+            <div>
+              <FactsPanel
+                isExpanded={showFacts}
+                onToggle={() => setShowFacts(!showFacts)}
+                userLocation={pos}
+                antipode={opposite}
+              />
+            </div>
+
+            <div>
+              <LocationsPanel
+                isExpanded={showLocations}
+                onToggle={() => setShowLocations(!showLocations)}
+                onSelect={setPos}
+              />
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

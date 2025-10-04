@@ -1,4 +1,5 @@
 "use client";
+
 import { useMemo } from "react";
 import { type LatLngExpression } from "leaflet";
 import L from "leaflet";
@@ -11,15 +12,15 @@ interface Props {
   onDrag: (next: Coordinates) => void;
 }
 
-const makeDivIcon = (color: string) =>
+const makeDivIcon = (color: string, size: number = 24) =>
   L.divIcon({
     className: "",
-    iconSize: [18, 18],
-    html: `<span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 0 0 1px rgba(0,0,0,0.25);"></span>`,
+    iconSize: [size, size],
+    html: `<div style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 4px 12px rgba(0,0,0,0.3), 0 0 0 2px rgba(0,0,0,0.1);"><div style="width:8px;height:8px;border-radius:50%;background:white;"></div></div>`,
   });
 
-const redIcon = makeDivIcon("#ef4444");
-const grayIcon = makeDivIcon("#64748b");
+const primaryIcon = makeDivIcon("#3b82f6", 28);
+const secondaryIcon = makeDivIcon("#8b5cf6", 28);
 
 const toLatLng = ({ lat, lon }: Readonly<Coordinates>): LatLngExpression => [
   lat,
@@ -30,17 +31,23 @@ const AntipodeMaps = ({ pos, onDrag }: Readonly<Props>) => {
   const anti = useMemo(() => computeAntipode(pos), [pos]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-      <div className="w-full aspect-video overflow-hidden rounded-lg border">
-        <MapContainer center={toLatLng(pos)} zoom={3} className="w-full h-full">
+    <div className="fixed inset-0 grid grid-cols-1 lg:grid-cols-2">
+      {/* Your Location Map - Full Screen */}
+      <div className="relative h-full">
+        <MapContainer
+          center={toLatLng(pos)}
+          zoom={4}
+          className="w-full h-full"
+          zoomControl={true}
+        >
           <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="&copy; OpenStreetMap"
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
           <Marker
             position={toLatLng(pos)}
             draggable
-            icon={redIcon}
+            icon={primaryIcon}
             eventHandlers={{
               dragend: (e) => {
                 const ll = (e.target as L.Marker).getLatLng();
@@ -49,19 +56,26 @@ const AntipodeMaps = ({ pos, onDrag }: Readonly<Props>) => {
             }}
           />
         </MapContainer>
+
+        {/* Drag hint overlay */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/60 backdrop-blur-md rounded-full border border-white/20 pointer-events-none">
+          <p className="text-xs text-white/80">Drag marker to explore</p>
+        </div>
       </div>
 
-      <div className="w-full aspect-video overflow-hidden rounded-lg border">
+      {/* Antipode Map - Full Screen */}
+      <div className="relative h-full border-l border-white/10">
         <MapContainer
           center={toLatLng(anti)}
-          zoom={3}
+          zoom={4}
           className="w-full h-full"
+          zoomControl={true}
         >
           <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="&copy; OpenStreetMap"
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
-          <Marker position={toLatLng(anti)} icon={grayIcon} />
+          <Marker position={toLatLng(anti)} icon={secondaryIcon} />
         </MapContainer>
       </div>
     </div>
