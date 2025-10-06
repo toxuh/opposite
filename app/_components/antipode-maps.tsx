@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { type LatLngExpression } from "leaflet";
 import L from "leaflet";
-import { MapContainer, Marker, TileLayer } from "react-leaflet";
+import "leaflet.geodesic";
+import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
 
 import { computeAntipode, type Coordinates } from "@/lib/services/antipode";
 
@@ -27,12 +28,55 @@ const toLatLng = ({ lat, lon }: Readonly<Coordinates>): LatLngExpression => [
   lon,
 ];
 
+const GeodesicLine = ({
+  start,
+  end,
+}: {
+  start: Coordinates;
+  end: Coordinates;
+}) => {
+  const map = useMap();
+  const geodesicRef = useRef<L.Layer | null>(null);
+
+  useEffect(() => {
+    if (!map) return;
+
+    if (geodesicRef.current) {
+      map.removeLayer(geodesicRef.current);
+    }
+
+    const geodesic = new L.Geodesic(
+      [
+        [start.lat, start.lon],
+        [end.lat, end.lon],
+      ],
+      {
+        weight: 2,
+        opacity: 0.6,
+        color: "#8b5cf6",
+        steps: 100,
+        wrap: false,
+      },
+    );
+
+    geodesic.addTo(map);
+    geodesicRef.current = geodesic;
+
+    return () => {
+      if (geodesicRef.current) {
+        map.removeLayer(geodesicRef.current);
+      }
+    };
+  }, [map, start.lat, start.lon, end.lat, end.lon]);
+
+  return null;
+};
+
 const AntipodeMaps = ({ pos, onDrag }: Readonly<Props>) => {
   const anti = useMemo(() => computeAntipode(pos), [pos]);
 
   return (
     <div className="fixed inset-0 grid grid-cols-1 lg:grid-cols-2">
-      {/* Your Location Map - Full Screen */}
       <div className="relative h-full">
         <MapContainer
           center={toLatLng(pos)}
@@ -55,15 +99,14 @@ const AntipodeMaps = ({ pos, onDrag }: Readonly<Props>) => {
               },
             }}
           />
+          <GeodesicLine start={pos} end={anti} />
         </MapContainer>
 
-        {/* Drag hint overlay */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/60 backdrop-blur-md rounded-full border border-white/20 pointer-events-none">
           <p className="text-xs text-white/80">Drag marker to explore</p>
         </div>
       </div>
 
-      {/* Antipode Map - Full Screen */}
       <div className="relative h-full border-l border-white/10">
         <MapContainer
           center={toLatLng(anti)}
@@ -76,6 +119,7 @@ const AntipodeMaps = ({ pos, onDrag }: Readonly<Props>) => {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
           <Marker position={toLatLng(anti)} icon={secondaryIcon} />
+          <GeodesicLine start={pos} end={anti} />
         </MapContainer>
       </div>
     </div>

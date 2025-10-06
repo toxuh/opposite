@@ -20,6 +20,9 @@ const LocationsPanel = dynamic(
   () => import("@/app/_components/locations-panel"),
   { ssr: false },
 );
+const WeatherPanel = dynamic(() => import("@/app/_components/weather-panel"), {
+  ssr: false,
+});
 
 interface Status {
   state: "idle" | "locating" | "ready" | "error";
@@ -65,19 +68,20 @@ const Home = () => {
   const [showInfo, setShowInfo] = useState(true);
   const [showFacts, setShowFacts] = useState(true);
   const [showLocations, setShowLocations] = useState(true);
+  const [showWeather, setShowWeather] = useState(true);
 
-  // Load panel states from localStorage
   useEffect(() => {
     const savedInfo = localStorage.getItem("panel-info");
     const savedFacts = localStorage.getItem("panel-facts");
     const savedLocations = localStorage.getItem("panel-locations");
+    const savedWeather = localStorage.getItem("panel-weather");
 
     if (savedInfo !== null) setShowInfo(savedInfo === "true");
     if (savedFacts !== null) setShowFacts(savedFacts === "true");
     if (savedLocations !== null) setShowLocations(savedLocations === "true");
+    if (savedWeather !== null) setShowWeather(savedWeather === "true");
   }, []);
 
-  // Save panel states to localStorage
   useEffect(() => {
     localStorage.setItem("panel-info", String(showInfo));
   }, [showInfo]);
@@ -91,6 +95,10 @@ const Home = () => {
   }, [showLocations]);
 
   useEffect(() => {
+    localStorage.setItem("panel-weather", String(showWeather));
+  }, [showWeather]);
+
+  useEffect(() => {
     if (coords && !pos) setPos(coords);
   }, [coords, pos]);
 
@@ -98,7 +106,6 @@ const Home = () => {
 
   return (
     <div className="relative h-screen overflow-hidden">
-      {/* Loading state - Full screen */}
       {status.state === "locating" && (
         <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-blue-950 to-purple-950 flex items-center justify-center z-50">
           <motion.div
@@ -114,7 +121,6 @@ const Home = () => {
         </div>
       )}
 
-      {/* Error state - Full screen */}
       {status.state === "error" && (
         <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-blue-950 to-purple-950 flex items-center justify-center z-50">
           <motion.div
@@ -141,13 +147,9 @@ const Home = () => {
         </div>
       )}
 
-      {/* Main content - Maps full screen */}
       {pos && opposite && (
         <>
-          {/* Maps */}
           <AntipodeMaps pos={pos} onDrag={setPos} />
-
-          {/* Logo - Top Left */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -159,7 +161,6 @@ const Home = () => {
             </h1>
           </motion.div>
 
-          {/* Widget Panels - Top Right */}
           <div className="fixed top-4 right-4 z-30 flex flex-col gap-3 items-end">
             <div>
               <InfoPanel
@@ -184,6 +185,15 @@ const Home = () => {
                 isExpanded={showLocations}
                 onToggle={() => setShowLocations(!showLocations)}
                 onSelect={setPos}
+              />
+            </div>
+
+            <div>
+              <WeatherPanel
+                isExpanded={showWeather}
+                onToggle={() => setShowWeather(!showWeather)}
+                userLocation={pos}
+                antipode={opposite}
               />
             </div>
           </div>

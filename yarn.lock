@@ -2346,6 +2346,11 @@ language-tags@^1.0.9:
   dependencies:
     language-subtag-registry "^0.3.20"
 
+leaflet.geodesic@^2.7.2:
+  version "2.7.2"
+  resolved "https://registry.yarnpkg.com/leaflet.geodesic/-/leaflet.geodesic-2.7.2.tgz#fef81fd37dcdda2e08789de4cc84d0e01006029f"
+  integrity sha512-2z7t6/q/hkDKRWjjSTyOX0iEs7WnC6/I2Tl+cYIl4zWZ16ZAyRuzUATIjznaoN1aU24nW/qnZwPN9ITv24btqw==
+
 leaflet@^1.9.4:
   version "1.9.4"
   resolved "https://registry.yarnpkg.com/leaflet/-/leaflet-1.9.4.tgz#23fae724e282fa25745aff82ca4d394748db7d8d"

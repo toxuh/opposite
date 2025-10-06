@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ChevronUp,
@@ -9,6 +10,7 @@ import {
   Ruler,
   Clock,
   Compass,
+  Mountain,
 } from "lucide-react";
 
 import { type Coordinates } from "@/lib/services/antipode";
@@ -50,6 +52,40 @@ const InfoPanel = ({
   const distance = calculateDistance(userLocation, antipode);
   const timeDiff = getTimeDifference(userLocation, antipode);
 
+  const [userElevation, setUserElevation] = useState<number | null>(null);
+  const [antipodeElevation, setAntipodeElevation] = useState<number | null>(
+    null,
+  );
+  const [elevationLoading, setElevationLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchElevations = async () => {
+      setElevationLoading(true);
+      try {
+        const response = await fetch("/api/elevation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userLat: userLocation.lat,
+            userLon: userLocation.lon,
+            antipodeLat: antipode.lat,
+            antipodeLon: antipode.lon,
+          }),
+        });
+
+        const data = await response.json();
+        setUserElevation(data.userElevation);
+        setAntipodeElevation(data.antipodeElevation);
+      } catch (error) {
+        console.error("Failed to fetch elevations:", error);
+      } finally {
+        setElevationLoading(false);
+      }
+    };
+
+    fetchElevations();
+  }, [userLocation.lat, userLocation.lon, antipode.lat, antipode.lon]);
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -57,7 +93,6 @@ const InfoPanel = ({
       className="bg-black/60 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl overflow-hidden"
       style={{ width: isExpanded ? "280px" : "auto" }}
     >
-      {/* Collapsed - Icon only */}
       {!isExpanded && (
         <button
           onClick={onToggle}
@@ -68,10 +103,8 @@ const InfoPanel = ({
         </button>
       )}
 
-      {/* Expanded - Full content */}
       {isExpanded && (
         <>
-          {/* Header */}
           <button
             onClick={onToggle}
             className="w-full p-3 flex items-center justify-between hover:bg-white/5 transition-colors"
@@ -83,9 +116,7 @@ const InfoPanel = ({
             <ChevronUp className="w-4 h-4" />
           </button>
 
-          {/* Content */}
           <div className="p-3 pt-0 space-y-3 text-sm">
-            {/* Your Location */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-blue-400">
                 <MapPin className="w-3 h-3" />
@@ -104,10 +135,21 @@ const InfoPanel = ({
                     {format(userLocation.lon)}°
                   </span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    Elevation
+                  </span>
+                  <span className="text-xs font-mono">
+                    {elevationLoading
+                      ? "..."
+                      : userElevation !== null
+                        ? `${userElevation} m`
+                        : "N/A"}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Antipode */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-purple-400">
                 <Globe className="w-3 h-3" />
@@ -126,10 +168,21 @@ const InfoPanel = ({
                     {format(antipode.lon)}°
                   </span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    Elevation
+                  </span>
+                  <span className="text-xs font-mono">
+                    {elevationLoading
+                      ? "..."
+                      : antipodeElevation !== null
+                        ? `${antipodeElevation} m`
+                        : "N/A"}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Stats */}
             <div className="pt-2 border-t border-white/10 space-y-2">
               <div className="flex items-center gap-2">
                 <Ruler className="w-3 h-3 text-blue-400" />
@@ -160,6 +213,18 @@ const InfoPanel = ({
                   {antipode.lon >= 0 ? "E" : "W"}
                 </span>
               </div>
+
+              {userElevation !== null && antipodeElevation !== null && (
+                <div className="flex items-center gap-2">
+                  <Mountain className="w-3 h-3 text-green-400" />
+                  <span className="text-xs text-muted-foreground">
+                    Elevation diff:
+                  </span>
+                  <span className="text-xs font-medium">
+                    {Math.abs(userElevation - antipodeElevation)} m
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </>
